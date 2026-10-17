@@ -1,0 +1,44 @@
+// Admin Web App Type Definitions — Firebase Edition
+
+export type VideoStatus = 'draft' | 'published' | 'archived';
+
+export interface Subject {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  units?: string[];
+}
+
+export interface Video {
+  id: string;
+  title: string;
+  description?: string;
+  subject_id?: string;
+  subject_name?: string;
+  chapter?: string;
+  unit?: string;
+  unit_order?: number;
+  video_url: string;
+  thumbnail_url?: string;
+  duration: number;          // seconds
+  status: VideoStatus;
+  views: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DashboardStats {
+  total_videos: number;
+  published_videos: number;
+  draft_videos: number;
+  total_subjects: number;
+  total_views: number;
+  recent_uploads: Video[];
+}
+
+export interface AdminUser {
+  uid: string;
+  email: string | null;
+}
