@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ShieldCheck,
   Video as VideoIcon,
@@ -24,6 +24,7 @@ import {
   Link,
   Clock,
   ListVideo,
+  Sparkles,
 } from 'lucide-react';
 import type { Video, Subject, DashboardStats, AdminUser } from './types';
 import {
@@ -115,6 +116,11 @@ export function App() {
   // Folder Direct Video Upload Helper
   const [_folderUploading, setFolderUploading] = useState(false);
   const [_folderUploadProgress, setFolderUploadProgress] = useState(0);
+
+  // Auto-fetch Title state
+  const [fetchingTitle, setFetchingTitle] = useState(false);
+  const [autoFilledTitle, setAutoFilledTitle] = useState(false);
+  const lastFetchedVideoIdRef = useRef<string>('');
 
   // Toast
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -255,6 +261,9 @@ export function App() {
       setFormDuration('600');
     }
 
+    setFetchingTitle(false);
+    setAutoFilledTitle(false);
+    lastFetchedVideoIdRef.current = '';
     setShowEditorModal(true);
   };
 
@@ -285,49 +294,133 @@ export function App() {
         autoDetectDuration(v.video_url);
       }
     }
+    setFetchingTitle(false);
+    setAutoFilledTitle(false);
+    lastFetchedVideoIdRef.current = '';
     setShowEditorModal(true);
   };
 
-  const handleLinkInputChange = (newLink: string) => {
+  // ── Auto-fetch Video Metadata (YouTube / Vimeo / Drive Title & Thumbnail) ───
+  const fetchVideoMetadata = async (url: string, force = false) => {
+    const clean = url.trim();
+    if (!clean) return;
+    const parsed = parseVideoSource(clean);
+
+    if (parsed.type === 'youtube' && parsed.videoId) {
+      // Avoid duplicate redundant calls unless forced
+      if (!force && lastFetchedVideoIdRef.current === parsed.videoId && formTitle.trim()) {
+        return;
+      }
+      lastFetchedVideoIdRef.current = parsed.videoId;
+
+      // Auto-set high resolution thumbnail
+      if (!formThumbUrl || formThumbUrl.includes('unsplash.com') || force) {
+        setFormThumbUrl(parsed.suggestedThumbnail || `https://img.youtube.com/vi/${parsed.videoId}/maxresdefault.jpg`);
+      }
+      if (!formDuration || formDuration === '0') {
+        setFormDuration('600');
+      }
+
+      setFetchingTitle(true);
+      const canonicalYt = `https://www.youtube.com/watch?v=${parsed.videoId}`;
+
+      try {
+        let fetchedTitle = '';
+        let fetchedAuthor = '';
+
+        // Method 1: noembed.com (CORS enabled, highly reliable)
+        try {
+          const res1 = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(canonicalYt)}`);
+          if (res1.ok) {
+            const data1 = await res1.json();
+            if (data1.title) {
+              fetchedTitle = data1.title;
+              fetchedAuthor = data1.author_name || '';
+            }
+          }
+        } catch {}
+
+        // Method 2: Direct YouTube oembed fallback
+        if (!fetchedTitle) {
+          try {
+            const res2 = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(canonicalYt)}&format=json`);
+            if (res2.ok) {
+              const data2 = await res2.json();
+              if (data2.title) {
+                fetchedTitle = data2.title;
+                fetchedAuthor = data2.author_name || '';
+              }
+            }
+          } catch {}
+        }
+
+        // Method 3: AllOrigins CORS proxy fallback
+        if (!fetchedTitle) {
+          try {
+            const res3 = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/oembed?url=${canonicalYt}&format=json`)}`);
+            if (res3.ok) {
+              const data3 = await res3.json();
+              if (data3.title) {
+                fetchedTitle = data3.title;
+                fetchedAuthor = data3.author_name || '';
+              }
+            }
+          } catch {}
+        }
+
+        if (fetchedTitle) {
+          setFormTitle(fetchedTitle);
+          setAutoFilledTitle(true);
+          if (!formDesc.trim() && fetchedAuthor) {
+            setFormDesc(`Presented by ${fetchedAuthor}`);
+          }
+          showToast('success', `Auto-filled video title from YouTube!`);
+        }
+      } catch (err) {
+        console.warn('Auto-fetch title error:', err);
+      } finally {
+        setFetchingTitle(false);
+      }
+    } else if (parsed.type === 'vimeo' && parsed.videoId) {
+      if (!force && lastFetchedVideoIdRef.current === parsed.videoId && formTitle.trim()) {
+        return;
+      }
+      lastFetchedVideoIdRef.current = parsed.videoId;
+      setFetchingTitle(true);
+      try {
+        const res = await fetch(`https://vimeo.com/api/oembed.json?url=https://vimeo.com/${parsed.videoId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.title) {
+            setFormTitle(data.title);
+            setAutoFilledTitle(true);
+            showToast('success', `Auto-filled video title from Vimeo!`);
+          }
+          if (data.thumbnail_url && (!formThumbUrl || formThumbUrl.includes('unsplash.com') || force)) {
+            setFormThumbUrl(data.thumbnail_url);
+          }
+        }
+      } catch {} finally {
+        setFetchingTitle(false);
+      }
+    } else if (parsed.type === 'drive') {
+      if (parsed.suggestedThumbnail && (!formThumbUrl || formThumbUrl.includes('unsplash.com') || force)) {
+        setFormThumbUrl(parsed.suggestedThumbnail);
+      }
+      if (!formDuration || formDuration === '0') {
+        setFormDuration('600');
+      }
+    } else if (parsed.type === 'direct' && clean.startsWith('http')) {
+      autoDetectDuration(clean);
+    }
+  };
+
+  const handleLinkInputChange = (newLink: string, force = false) => {
     setFormLinkInput(newLink);
     const clean = newLink.trim();
     setFormVideoUrl(clean);
-
     if (clean) {
-      const parsed = parseVideoSource(clean);
-      // Auto-populate thumbnail from YouTube if current thumbnail is default or blank
-      if (parsed.type === 'youtube' && parsed.suggestedThumbnail) {
-        if (!formThumbUrl || formThumbUrl.includes('unsplash.com')) {
-          setFormThumbUrl(parsed.suggestedThumbnail);
-        }
-        // Auto-fetch YouTube title if empty
-        if (!formTitle.trim()) {
-          fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(clean)}&format=json`)
-            .then(res => res.json())
-            .then(data => {
-              if (data?.title) {
-                setFormTitle(data.title);
-              }
-            })
-            .catch(() => {});
-        }
-        if (!formDuration || formDuration === '0') {
-          setFormDuration('600');
-        }
-      }
-      // Auto-populate thumbnail and default duration for Google Drive
-      if (parsed.type === 'drive') {
-        if (parsed.suggestedThumbnail && (!formThumbUrl || formThumbUrl.includes('unsplash.com'))) {
-          setFormThumbUrl(parsed.suggestedThumbnail);
-        }
-        if (!formDuration || formDuration === '0') {
-          setFormDuration('600');
-        }
-      }
-      // If direct stream URL, probe duration
-      if (parsed.type === 'direct' && clean.startsWith('http')) {
-        autoDetectDuration(clean);
-      }
+      fetchVideoMetadata(clean, force);
     }
   };
 
@@ -1738,6 +1831,12 @@ export function App() {
                     className="form-input"
                     value={formLinkInput}
                     onChange={e => handleLinkInputChange(e.target.value)}
+                    onPaste={e => {
+                      const pasted = e.clipboardData?.getData('text');
+                      if (pasted) {
+                        handleLinkInputChange(pasted, true);
+                      }
+                    }}
                     placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/... or .mp4 link"
                     style={{ fontWeight: 600 }}
                     required={videoSourceMode === 'link'}
@@ -1783,7 +1882,19 @@ export function App() {
                           {parsed.type === 'drive' && '🟢 Google Drive Video Detected'}
                           {parsed.type === 'direct' && '🎬 Direct Video Stream Detected'}
                         </span>
-                        {parsed.type === 'youtube' && (
+                        {fetchingTitle && (
+                          <span style={{ fontSize: '0.74rem', color: 'var(--brand)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                            Auto-fetching title...
+                          </span>
+                        )}
+                        {!fetchingTitle && autoFilledTitle && (
+                          <span style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Check size={13} />
+                            Title & thumbnail auto-filled
+                          </span>
+                        )}
+                        {!fetchingTitle && !autoFilledTitle && parsed.type === 'youtube' && (
                           <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 600 }}>
                             ✓ YouTube player & thumbnail configured
                           </span>
@@ -1799,17 +1910,73 @@ export function App() {
                 </div>
               )}
 
-              {/* 2. NAME / TITLE */}
+              {/* 2. NAME / TITLE (Auto-filled from YouTube Link) */}
               <div className="form-group">
-                <label className="form-label">Video Name / Title *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={formTitle}
-                  onChange={e => setFormTitle(e.target.value)}
-                  placeholder="e.g. Introduction to Physics: Chapter 1"
-                  required
-                />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <label className="form-label" style={{ margin: 0 }}>Video Name / Title *</label>
+                  {videoSourceMode === 'link' && formLinkInput.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => fetchVideoMetadata(formLinkInput, true)}
+                      disabled={fetchingTitle}
+                      style={{
+                        background: 'rgba(249, 115, 22, 0.1)',
+                        border: '1px solid rgba(249, 115, 22, 0.25)',
+                        color: 'var(--brand)',
+                        fontSize: '0.73rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '2px 8px',
+                        borderRadius: 6,
+                      }}
+                      title="Click to re-fetch the video title from YouTube link"
+                    >
+                      <Sparkles size={12} />
+                      {fetchingTitle ? 'Fetching title...' : 'Auto-fill from Link'}
+                    </button>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={formTitle}
+                    onChange={e => {
+                      setFormTitle(e.target.value);
+                      setAutoFilledTitle(false);
+                    }}
+                    placeholder={fetchingTitle ? 'Fetching video title from YouTube...' : 'e.g. Introduction to Physics: Chapter 1'}
+                    style={autoFilledTitle ? { borderColor: '#16a34a', background: 'rgba(22, 163, 74, 0.02)' } : undefined}
+                    required
+                  />
+                  {fetchingTitle && (
+                    <div style={{
+                      position: 'absolute',
+                      right: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      color: 'var(--brand)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      pointerEvents: 'none',
+                    }}>
+                      <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                      <span>Fetching title...</span>
+                    </div>
+                  )}
+                </div>
+                {autoFilledTitle && !fetchingTitle && (
+                  <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 600, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Check size={13} />
+                    <span>Title auto-filled from YouTube link</span>
+                  </div>
+                )}
               </div>
 
               {/* 3. DESCRIPTION */}
