@@ -24,7 +24,6 @@ import {
   Link,
   Clock,
   ListVideo,
-  Sparkles,
 } from 'lucide-react';
 import type { Video, Subject, DashboardStats, AdminUser } from './types';
 import {
@@ -128,7 +127,7 @@ export function App() {
   // Subject form
   const [subjName, setSubjName] = useState('');
   const [subjDesc, setSubjDesc] = useState('');
-  const [subjColor, setSubjColor] = useState('#F97316');
+  const [subjColor, setSubjColor] = useState('#2563EB');
 
   // ── Auth listener ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -243,9 +242,7 @@ export function App() {
       setFormUnitOrder('1');
     }
 
-    setFormThumbUrl(
-      'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=800&q=80'
-    );
+    setFormThumbUrl('');
     setFormDuration(mode === 'link' ? '600' : '0');
     setFormPublished(true);
     setVideoSourceMode(mode);
@@ -459,9 +456,7 @@ export function App() {
       unit: finalUnit,
       unit_order: finalUnitOrder,
       video_url: finalVideoUrl,
-      thumbnail_url:
-        formThumbUrl.trim() ||
-        'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=800&q=80',
+      thumbnail_url: formThumbUrl.trim(),
       duration: finalDuration,
       status: (formPublished ? 'published' : 'draft') as 'published' | 'draft',
       updated_at: new Date().toISOString(),
@@ -836,7 +831,7 @@ export function App() {
                 fontWeight: 500,
               }}
             >
-              Select video from folder & assign details
+              Course Content Administration Console
             </div>
           </div>
         </div>
@@ -1145,21 +1140,40 @@ export function App() {
                     filteredVideos.map(v => (
                       <tr key={v.id}>
                         <td>
-                          <img
-                            src={
-                              v.thumbnail_url ||
-                              'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=120'
-                            }
-                            alt={v.title}
-                            style={{
-                              width: 80,
-                              height: 48,
-                              objectFit: 'cover',
-                              borderRadius: 8,
-                              display: 'block',
-                              border: '1.5px solid var(--border)',
-                            }}
-                          />
+                          {v.thumbnail_url && !v.thumbnail_url.includes('unsplash.com') ? (
+                            <img
+                              src={v.thumbnail_url}
+                              alt={v.title}
+                              style={{
+                                width: 80,
+                                height: 48,
+                                objectFit: 'cover',
+                                borderRadius: 8,
+                                display: 'block',
+                                border: '1px solid var(--border)',
+                              }}
+                              onError={e => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 80,
+                                height: 48,
+                                borderRadius: 8,
+                                background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#93C5FD',
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              electrON
+                            </div>
+                          )}
                         </td>
                         <td style={{ maxWidth: 260 }}>
                           <div
@@ -1934,7 +1948,7 @@ export function App() {
                       }}
                       title="Click to re-fetch the video title from YouTube link"
                     >
-                      <Sparkles size={12} />
+                      <RefreshCw size={12} style={fetchingTitle ? { animation: 'spin 1s linear infinite' } : {}} />
                       {fetchingTitle ? 'Fetching title...' : 'Auto-fill from Link'}
                     </button>
                   )}
@@ -2152,7 +2166,7 @@ export function App() {
                     className="form-input"
                     value={formThumbUrl}
                     onChange={e => setFormThumbUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="Image URL or upload a file..."
                     style={{ flex: 1 }}
                   />
                   <label
@@ -2200,8 +2214,7 @@ export function App() {
                         border: '1.5px solid var(--border)',
                       }}
                       onError={e => {
-                        (e.currentTarget as HTMLImageElement).src =
-                          'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=140';
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
                       }}
                     />
                   </div>
@@ -2253,7 +2266,7 @@ export function App() {
                           fontWeight: 700,
                           cursor: 'pointer',
                           border: isSelected ? '1.5px solid var(--brand)' : '1px solid var(--border)',
-                          background: isSelected ? '#FFF4EC' : 'var(--bg-surface)',
+                          background: isSelected ? 'var(--brand-light)' : 'var(--bg-surface)',
                           color: isSelected ? 'var(--brand)' : 'var(--text-secondary)',
                           transition: 'all 0.15s ease',
                         }}
@@ -2934,20 +2947,39 @@ export function App() {
                                   >
                                     #{v.unit_order || idx + 1}
                                   </span>
-                                  <img
-                                    src={
-                                      v.thumbnail_url ||
-                                      'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=100'
-                                    }
-                                    alt={v.title}
-                                    style={{
-                                      width: 52,
-                                      height: 32,
-                                      objectFit: 'cover',
-                                      borderRadius: 6,
-                                      border: '1px solid var(--border)',
-                                    }}
-                                  />
+                                  {v.thumbnail_url && !v.thumbnail_url.includes('unsplash.com') ? (
+                                    <img
+                                      src={v.thumbnail_url}
+                                      alt={v.title}
+                                      style={{
+                                        width: 52,
+                                        height: 32,
+                                        objectFit: 'cover',
+                                        borderRadius: 6,
+                                        border: '1px solid var(--border)',
+                                      }}
+                                      onError={e => {
+                                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div
+                                      style={{
+                                        width: 52,
+                                        height: 32,
+                                        borderRadius: 6,
+                                        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#93C5FD',
+                                        fontSize: '0.55rem',
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      LEC
+                                    </div>
+                                  )}
                                   <div>
                                     <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{v.title}</div>
                                     <div
@@ -3024,19 +3056,38 @@ export function App() {
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                              <img
-                                src={
-                                  v.thumbnail_url ||
-                                  'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=80'
-                                }
-                                alt={v.title}
-                                style={{
-                                  width: 48,
-                                  height: 30,
-                                  objectFit: 'cover',
-                                  borderRadius: 6,
-                                }}
-                              />
+                              {v.thumbnail_url && !v.thumbnail_url.includes('unsplash.com') ? (
+                                <img
+                                  src={v.thumbnail_url}
+                                  alt={v.title}
+                                  style={{
+                                    width: 48,
+                                    height: 30,
+                                    objectFit: 'cover',
+                                    borderRadius: 6,
+                                  }}
+                                  onError={e => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    width: 48,
+                                    height: 30,
+                                    borderRadius: 6,
+                                    background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#93C5FD',
+                                    fontSize: '0.52rem',
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  LEC
+                                </div>
+                              )}
                               <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{v.title}</span>
                             </div>
                             <button
