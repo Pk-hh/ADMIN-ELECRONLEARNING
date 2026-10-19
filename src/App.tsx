@@ -27,6 +27,7 @@ import {
   FileText,
   ExternalLink,
   Paperclip,
+  Radio,
 } from 'lucide-react';
 import type { Video, Subject, DashboardStats, AdminUser } from './types';
 import {
@@ -110,7 +111,10 @@ export function App() {
   const [formThumbUrl, setFormThumbUrl] = useState('');
   const [formDuration, setFormDuration] = useState('600');
   const [formPublished, setFormPublished] = useState(true);
-  // 6. Materials / PDF / Drive Link
+  // 6. Scheduled Premiere / Live Stream
+  const [formIsLive, setFormIsLive] = useState(false);
+  const [formScheduledAt, setFormScheduledAt] = useState('');
+  // 7. Materials / PDF / Drive Link
   const [formMaterialUrl, setFormMaterialUrl] = useState('');
   const [formMaterialTitle, setFormMaterialTitle] = useState('');
 
@@ -251,6 +255,8 @@ export function App() {
     setFormThumbUrl('');
     setFormDuration(mode === 'link' ? '600' : '0');
     setFormPublished(true);
+    setFormIsLive(false);
+    setFormScheduledAt('');
     setFormMaterialUrl('');
     setFormMaterialTitle('');
     setVideoSourceMode(mode);
@@ -284,6 +290,8 @@ export function App() {
     setFormThumbUrl(v.thumbnail_url || '');
     setFormDuration(String(v.duration || 600));
     setFormPublished(v.status === 'published');
+    setFormIsLive(Boolean(v.is_live));
+    setFormScheduledAt(v.scheduled_at ? v.scheduled_at.slice(0, 16) : '');
     setFormMaterialUrl(v.material_url || v.materials?.[0]?.url || '');
     setFormMaterialTitle(v.material_title || v.materials?.[0]?.title || '');
 
@@ -475,6 +483,8 @@ export function App() {
       materials: finalMaterialUrl ? [{ title: finalMaterialTitle, url: finalMaterialUrl }] : [],
       duration: finalDuration,
       status: (formPublished ? 'published' : 'draft') as 'published' | 'draft',
+      is_live: formIsLive,
+      scheduled_at: formIsLive && formScheduledAt ? new Date(formScheduledAt).toISOString() : '',
       updated_at: new Date().toISOString(),
     };
 
@@ -2402,6 +2412,71 @@ export function App() {
                     Students can view or download this material directly inside the video cinema player while watching.
                   </span>
                 </div>
+              </div>
+
+              {/* 8. SCHEDULED LIVE STREAM / PREMIERE */}
+              <div
+                style={{
+                  background: formIsLive ? 'rgba(239, 68, 68, 0.05)' : 'var(--bg-surface)',
+                  padding: '0.9rem 1rem',
+                  borderRadius: 14,
+                  border: formIsLive ? '1.5px solid rgba(239, 68, 68, 0.35)' : '1.5px solid var(--border)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.65rem',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    marginBottom: formIsLive ? '0.75rem' : 0,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formIsLive}
+                    onChange={e => {
+                      const checked = e.target.checked;
+                      setFormIsLive(checked);
+                      if (checked && !formScheduledAt) {
+                        // Default to 1 hour from now formatted for datetime-local input
+                        const nextHour = new Date(Date.now() + 60 * 60 * 1000);
+                        const localISO = new Date(nextHour.getTime() - nextHour.getTimezoneOffset() * 60000)
+                          .toISOString()
+                          .slice(0, 16);
+                        setFormScheduledAt(localISO);
+                      }
+                    }}
+                    style={{ width: 17, height: 17, accentColor: '#EF4444' }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Radio size={16} color={formIsLive ? '#EF4444' : 'var(--text-muted)'} />
+                    <span style={{ fontWeight: 800, fontSize: '0.88rem', color: formIsLive ? '#DC2626' : 'var(--text-primary)' }}>
+                      Schedule as Live Stream / Premiere
+                    </span>
+                  </div>
+                </label>
+
+                {formIsLive && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.4rem', borderTop: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      Live Stream Start Date & Time *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="form-input"
+                      value={formScheduledAt}
+                      onChange={e => setFormScheduledAt(e.target.value)}
+                      required={formIsLive}
+                      style={{ background: '#FFFFFF', borderColor: '#EF4444' }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      A live stream countdown will be shown to students until this exact time, after which the video premieres live.
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Status toggle */}
