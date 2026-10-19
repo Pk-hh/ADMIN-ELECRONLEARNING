@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Video binaries (keep git repo light and fast)
+*.mp4
+*.webm
+*.mov
+*.mkv
+public/videos/*
+!public/videos/.gitkeep
