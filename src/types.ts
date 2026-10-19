@@ -11,6 +11,13 @@ export interface Subject {
   units?: string[];
 }
 
+export interface VideoMaterial {
+  id?: string;
+  title: string;
+  url: string;
+  type?: 'pdf' | 'doc' | 'link' | 'drive' | 'github' | 'other';
+}
+
 export interface Video {
   id: string;
   title: string;
@@ -22,6 +29,9 @@ export interface Video {
   unit_order?: number;
   video_url: string;
   thumbnail_url?: string;
+  material_url?: string;
+  material_title?: string;
+  materials?: VideoMaterial[];
   duration: number;          // seconds
   status: VideoStatus;
   views: number;

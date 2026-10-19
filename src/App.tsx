@@ -24,6 +24,9 @@ import {
   Link,
   Clock,
   ListVideo,
+  FileText,
+  ExternalLink,
+  Paperclip,
 } from 'lucide-react';
 import type { Video, Subject, DashboardStats, AdminUser } from './types';
 import {
@@ -107,6 +110,9 @@ export function App() {
   const [formThumbUrl, setFormThumbUrl] = useState('');
   const [formDuration, setFormDuration] = useState('600');
   const [formPublished, setFormPublished] = useState(true);
+  // 6. Materials / PDF / Drive Link
+  const [formMaterialUrl, setFormMaterialUrl] = useState('');
+  const [formMaterialTitle, setFormMaterialTitle] = useState('');
 
   // Uploading thumbnail
   const [thumbUploading, setThumbUploading] = useState(false);
@@ -245,6 +251,8 @@ export function App() {
     setFormThumbUrl('');
     setFormDuration(mode === 'link' ? '600' : '0');
     setFormPublished(true);
+    setFormMaterialUrl('');
+    setFormMaterialTitle('');
     setVideoSourceMode(mode);
 
     if (mode === 'folder') {
@@ -276,6 +284,8 @@ export function App() {
     setFormThumbUrl(v.thumbnail_url || '');
     setFormDuration(String(v.duration || 600));
     setFormPublished(v.status === 'published');
+    setFormMaterialUrl(v.material_url || v.materials?.[0]?.url || '');
+    setFormMaterialTitle(v.material_title || v.materials?.[0]?.title || '');
 
     const parsed = parseVideoSource(v.video_url);
     if (parsed.type !== 'direct' || v.video_url.startsWith('http')) {
@@ -447,6 +457,9 @@ export function App() {
     const finalUnit = (formUnit === '__new__' ? formCustomUnit.trim() : formUnit.trim());
     const finalUnitOrder = parseInt(formUnitOrder, 10) || 1;
 
+    const finalMaterialUrl = formMaterialUrl.trim();
+    const finalMaterialTitle = formMaterialTitle.trim() || (finalMaterialUrl ? 'Lecture Notes & Study Material' : '');
+
     const payload = {
       title: formTitle.trim(),
       description: formDesc.trim(),
@@ -457,6 +470,9 @@ export function App() {
       unit_order: finalUnitOrder,
       video_url: finalVideoUrl,
       thumbnail_url: formThumbUrl.trim(),
+      material_url: finalMaterialUrl,
+      material_title: finalMaterialTitle,
+      materials: finalMaterialUrl ? [{ title: finalMaterialTitle, url: finalMaterialUrl }] : [],
       duration: finalDuration,
       status: (formPublished ? 'published' : 'draft') as 'published' | 'draft',
       updated_at: new Date().toISOString(),
@@ -1282,6 +1298,31 @@ export function App() {
                                 >
                                   {v.video_url.split('/').pop()?.split('?')[0] || v.video_url}
                                 </div>
+                                {(v.material_url || (v.materials && v.materials.length > 0)) && (
+                                  <a
+                                    href={v.material_url || v.materials?.[0]?.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={e => e.stopPropagation()}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      fontSize: '0.68rem',
+                                      fontWeight: 700,
+                                      color: '#2563EB',
+                                      background: 'rgba(37, 99, 235, 0.08)',
+                                      border: '1px solid rgba(37, 99, 235, 0.2)',
+                                      borderRadius: 6,
+                                      padding: '0.12rem 0.4rem',
+                                      textDecoration: 'none',
+                                      width: 'fit-content',
+                                    }}
+                                    title={`Material: ${v.material_title || 'Study Material'}`}
+                                  >
+                                    <Paperclip size={11} /> {v.material_title || 'Material'} <ExternalLink size={9} />
+                                  </a>
+                                )}
                               </div>
                             );
                           })()}
@@ -2299,6 +2340,70 @@ export function App() {
                 </span>
               </div>
 
+              {/* 7. STUDY MATERIAL / DOCUMENT LINK (PDF, Notes, Slides, Drive) */}
+              <div className="form-group" style={{ background: 'var(--bg-surface)', padding: '0.9rem 1rem', borderRadius: 14, border: '1.5px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <label className="form-label" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800 }}>
+                    <FileText size={16} color="var(--brand)" /> Study Material / Document Link (Optional)
+                  </label>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    PDF, Drive, Slides, or Notes Link
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                      Material Title / Label
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formMaterialTitle}
+                      onChange={e => setFormMaterialTitle(e.target.value)}
+                      placeholder="e.g. Lecture Notes PDF, Formula Sheet, Unit 1 Notes"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                      Material Link / URL
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <input
+                        type="url"
+                        className="form-input"
+                        value={formMaterialUrl}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setFormMaterialUrl(val);
+                          if (val && !formMaterialTitle) {
+                            setFormMaterialTitle('Lecture Notes PDF');
+                          }
+                        }}
+                        placeholder="e.g. https://drive.google.com/... or https://dropbox.com/... or PDF link"
+                        style={{ flex: 1 }}
+                      />
+                      {formMaterialUrl && (
+                        <a
+                          href={formMaterialUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary"
+                          style={{ textDecoration: 'none', padding: '0.55rem 0.85rem', fontSize: '0.78rem', whiteSpace: 'nowrap', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          title="Test material link in new tab"
+                        >
+                          <ExternalLink size={13} /> Test Link
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Students can view or download this material directly inside the video cinema player while watching.
+                  </span>
+                </div>
+              </div>
+
               {/* Status toggle */}
               <label
                 style={{
@@ -2454,6 +2559,41 @@ export function App() {
               >
                 {previewVideo.description}
               </p>
+            )}
+            {(previewVideo.material_url || previewVideo.materials?.[0]?.url) && (
+              <div
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.85rem 1rem',
+                  background: 'var(--bg-surface)',
+                  borderRadius: 12,
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FileText size={18} color="var(--brand)" />
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {previewVideo.material_title || previewVideo.materials?.[0]?.title || 'Study Material / Notes'}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Attached document / download link
+                    </div>
+                  </div>
+                </div>
+                <a
+                  href={previewVideo.material_url || previewVideo.materials?.[0]?.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-primary"
+                  style={{ textDecoration: 'none', padding: '0.45rem 0.9rem', fontSize: '0.78rem', borderRadius: 50, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                >
+                  <ExternalLink size={13} /> View Material
+                </a>
+              </div>
             )}
           </div>
         </div>

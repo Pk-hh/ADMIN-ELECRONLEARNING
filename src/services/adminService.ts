@@ -78,6 +78,11 @@ function docToVideo(d: QueryDocumentSnapshot<DocumentData>): Video {
     duration: rawDur > 0 ? rawDur : 600,
     thumbnail_url: data.thumbnail_url ?? '',
     video_url: data.video_url ?? '',
+    material_url: data.material_url ?? data.materials_url ?? '',
+    material_title: data.material_title ?? '',
+    materials: Array.isArray(data.materials)
+      ? data.materials
+      : (data.material_url ? [{ title: data.material_title || 'Study Material', url: data.material_url }] : []),
     status: (data.status ?? 'published') as 'published' | 'draft',
     views: typeof data.views === 'number' ? data.views : (parseInt(data.views, 10) || 0),
     created_at: createdStr,
