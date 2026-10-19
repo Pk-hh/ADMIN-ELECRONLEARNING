@@ -917,7 +917,7 @@ export function App() {
 
         {/* ── VIDEOS TAB (Primary admin view) ── */}
         {!dataLoading && activeTab === 'videos' && (
-          <div>
+          <div key="videos" className="tab-pane-content">
             {/* Header with actions */}
             <div
               style={{
@@ -1355,7 +1355,7 @@ export function App() {
 
         {/* ── SUBJECTS TAB ── */}
         {!dataLoading && activeTab === 'subjects' && (
-          <div>
+          <div key="subjects" className="tab-pane-content">
             <div
               style={{
                 display: 'flex',
@@ -1591,7 +1591,7 @@ export function App() {
 
         {/* ── STATS TAB ── */}
         {!dataLoading && activeTab === 'dashboard' && (
-          <div>
+          <div key="dashboard" className="tab-pane-content">
             <h2
               style={{
                 fontSize: '1.4rem',
