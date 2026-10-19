@@ -1464,10 +1464,6 @@ export function App() {
                     className="subject-admin-card"
                     style={{
                       borderTop: `4px solid ${s.color || 'var(--brand)'}`,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: 220,
                     }}
                   >
                     <div>
@@ -3327,6 +3323,38 @@ export function App() {
           </div>
         </div>
       )}
+
+      {/* ── Mobile Bottom Navigation Bar (App-like compact switcher) ── */}
+      <nav className="mobile-bottom-nav">
+        <button
+          className={`mobile-nav-btn ${activeTab === 'videos' ? 'active' : ''}`}
+          onClick={() => setActiveTab('videos')}
+        >
+          <VideoIcon size={20} />
+          <span>Videos ({videos.length})</span>
+        </button>
+        <button
+          className={`mobile-nav-btn ${activeTab === 'subjects' ? 'active' : ''}`}
+          onClick={() => setActiveTab('subjects')}
+        >
+          <BookOpen size={20} />
+          <span>Subjects ({subjects.length})</span>
+        </button>
+        <button
+          className={`mobile-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          <Layers size={20} />
+          <span>Stats</span>
+        </button>
+        <button
+          className="mobile-nav-btn"
+          onClick={handleLogout}
+        >
+          <LogOut size={20} />
+          <span>Exit</span>
+        </button>
+      </nav>
     </div>
   );
 }
