@@ -408,15 +408,16 @@ export function parseVideoSource(url: string): VideoSourceInfo {
     };
   }
 
-  // File match (file/d/ID, open?id=ID, uc?id=ID, docs.google.com/file/d/ID)
+  // File match (file/d/ID, open?id=ID, uc?id=ID, docs.google.com/file/d/ID, drive.usercontent.google.com)
   const driveFileMatch = cleanUrl.match(
-    /(?:drive|docs)\.google\.com\/(?:file\/(?:u\/\d+\/)?d\/|open\?id=|uc\?(?:.*&)?id=)([a-zA-Z0-9_-]+)/i
+    /(?:(?:drive|docs)\.google\.com\/(?:file\/(?:u\/\d+\/)?d\/|open\?id=|uc\?(?:.*&)?id=)|drive\.usercontent\.google\.com\/download\?id=)([a-zA-Z0-9_-]+)/i
   );
   if (driveFileMatch && driveFileMatch[1]) {
     const fileId = driveFileMatch[1];
     return {
       type: 'drive',
       embedUrl: `https://drive.google.com/file/d/${fileId}/preview`,
+      directStreamUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
       originalUrl: cleanUrl,
       videoId: fileId,
       suggestedThumbnail: `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`,
