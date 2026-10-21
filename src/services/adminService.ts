@@ -38,6 +38,29 @@ export function onAuthChanged(cb: (user: User | null) => void) {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+export function parseScheduledDate(raw: any): string | undefined {
+  if (!raw) return undefined;
+  try {
+    if (typeof raw?.toDate === 'function') {
+      return raw.toDate().toISOString();
+    }
+    if (typeof raw?.seconds === 'number') {
+      return new Date(raw.seconds * 1000).toISOString();
+    }
+    if (typeof raw === 'number') {
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    }
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (!trimmed) return undefined;
+      const d = new Date(trimmed);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    }
+  } catch {}
+  return undefined;
+}
+
 export function parseCreatedDate(raw: any): string {
   if (!raw) return new Date(Date.now() - 3600000).toISOString();
   try {
@@ -64,6 +87,8 @@ function docToVideo(d: QueryDocumentSnapshot<DocumentData>): Video {
   const data = d.data();
   const createdStr = parseCreatedDate(data.created_at);
   const updatedStr = parseCreatedDate(data.updated_at || data.created_at);
+  const scheduledStr = parseScheduledDate(data.scheduled_at);
+  const isLive = Boolean(data.is_live === true || data.is_live === 'true' || data.is_live === 1 || Boolean(scheduledStr));
   const rawDur = typeof data.duration === 'number' ? data.duration : (parseInt(data.duration, 10) || 0);
 
   return {
@@ -85,6 +110,8 @@ function docToVideo(d: QueryDocumentSnapshot<DocumentData>): Video {
       : (data.material_url ? [{ title: data.material_title || 'Study Material', url: data.material_url }] : []),
     status: (data.status ?? 'published') as 'published' | 'draft',
     views: typeof data.views === 'number' ? data.views : (parseInt(data.views, 10) || 0),
+    is_live: isLive,
+    scheduled_at: scheduledStr,
     created_at: createdStr,
     updated_at: updatedStr,
   };
