@@ -387,7 +387,7 @@ export function parseVideoSource(url: string): VideoSourceInfo {
   );
   if (driveFolderMatch && driveFolderMatch[1]) {
     const folderId = driveFolderMatch[1];
-    if (folderId === '1j3hCE2dpEkKvTS8lV0J6bXAmsK9u4BTh') {
+    if (folderId.toLowerCase() === '1j3hce2dpekkvts8lv0j6bxamsk9u4bth') {
       const fileId = '1akjgeI2iL4n_yyigsVDSBHiowBoWufbM';
       return {
         type: 'drive',
